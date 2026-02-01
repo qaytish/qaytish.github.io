@@ -123,6 +123,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+console.log("lang_counts:", langCounts);
+
   const LANGS = Object.keys(langCounts)
     .filter(lang => langCounts[lang] > 1) // avoid accidental singletons
     .sort()                               // stable order
