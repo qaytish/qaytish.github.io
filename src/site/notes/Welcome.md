@@ -1,5 +1,5 @@
 ---
-{"dg-publish":true,"permalink":"/welcome/","tags":["gardenEntry"],"created":"2026-02-01T13:39:04.958+05:00","updated":"2026-02-01T14:06:12.116+05:00"}
+{"dg-publish":true,"permalink":"/welcome/","tags":["gardenEntry"],"created":"2026-02-01T13:39:04.958+05:00","updated":"2026-02-01T14:27:01.253+05:00"}
 ---
 
 
@@ -9,3 +9,6 @@ This is your new *vault*.
 Make a note of something, [[create a link\|create a link]], or try [the Importer](https://help.obsidian.md/Plugins/Importer)!
 
 When you're ready, delete this note and make the vault your own.
+
+
+test text
