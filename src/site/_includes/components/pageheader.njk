@@ -76,7 +76,6 @@
 }
 </style>
 
-
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   console.clear();
@@ -106,7 +105,6 @@ document.addEventListener("DOMContentLoaded", () => {
     ? "/" + parts.slice(0, -1).join("/") + "/"
     : "/";
 
-  // We'll refine baseName after we know homeBase
   const slugLang = slug.match(/-([a-z]{2,3})$/)?.[1] || "";
   const slugBaseName = slug.replace(/-[a-z]{2,3}$/, "");
 
@@ -116,26 +114,24 @@ document.addEventListener("DOMContentLoaded", () => {
   //   inside the note you mark: dg-home="true"
   // ---------------------------------------------------------
   const getHomeBaseName = () => {
-    // Preferred: <file-name>home.page</file-name> inside a dg-home node
     const marker = document.querySelector('[dg-home="true"] file-name')
-                || document.querySelector('file-name'); // fallback if you forgot the wrapper
-  
+                || document.querySelector('file-name'); // fallback
+
     if (marker?.textContent?.trim()) {
-      // Turn "home.page" into the slug base your URLs use: "home-page"
       return marker.textContent.trim()
         .toLowerCase()
-        .replace(/\./g, "-")     // NEW: dots -> hyphens
+        .replace(/\./g, "-")     // dots -> hyphens
         .replace(/\s+/g, "-")    // spaces -> hyphens
         .replace(/[^\w-]/g, "")  // remove anything weird
         .replace(/-+$/g, "");    // trim trailing hyphens
     }
-  
+
     // Fallback: old sidebar-root-link text method
     const link = document.querySelector(
       'a[href="/"].filename, a[href="./"].filename, a[href="/"] .filename'
     );
     if (!link?.textContent) return "home";
-  
+
     return link.textContent
       .trim()
       .toLowerCase()
@@ -144,16 +140,20 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/-[a-z]{2,3}$/, "");
   };
 
-
   const homeBase = getHomeBaseName();
   console.log("Home base:", homeBase);
+
+  // Stable site default language for "/"
+  const SITE_DEFAULT_LANG =
+    (document.documentElement.lang?.trim().toLowerCase().match(/^[a-z]{2,3}$/) || [])[0]
+    || "uz";
 
   // If we're literally at '/', treat current page as the home note.
   const isRoot = rawPath === "/";
   const baseName = isRoot ? homeBase : slugBaseName;
 
   // ---------------------------------------------------------
-  // STEP 2: Collect candidate slugs from sidebar (same as before)
+  // STEP 2: Collect candidate slugs from sidebar
   // ---------------------------------------------------------
   const anchors = [...document.querySelectorAll("a.filename")];
   const slugs = anchors
@@ -167,30 +167,19 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------------------------------------------------------
   const langSet = new Set();
 
-  // Find siblings like lesson-1-uz, lesson-1-en, etc.
-  // We match `${baseName}-${lang}` where lang is 2-3 letters.
-  const langRegex = new RegExp("^" + baseName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "-([a-z]{2,3})$");
+  const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const langRegex = new RegExp("^" + escapeRe(baseName) + "-([a-z]{2,3})$");
 
   for (const s of slugs) {
     const m = s.match(langRegex);
     if (m) langSet.add(m[1]);
   }
 
-  // HOME FIX: add the default language that maps to "/".
-  // Home default has no "-xx" slug, so it won't be discovered via sidebar matching.
+  // HOME FIX: always include the "/" language for the home note
   if (baseName === homeBase) {
-    // Prefer: <html lang="uz">, fallback: current slug suffix, fallback: first detected variant
-    const htmlLang = document.documentElement.lang?.trim().toLowerCase();
-    const defaultCandidate =
-      (htmlLang && /^[a-z]{2,3}$/.test(htmlLang) ? htmlLang : "") ||
-      slugLang ||
-      [...langSet][0];
-  
-    if (defaultCandidate) langSet.add(defaultCandidate);
+    langSet.add(SITE_DEFAULT_LANG);
   }
 
-
-  // If nothing found, no switcher.
   if (langSet.size === 0) {
     console.log("No per-note language variants detected for:", baseName);
     return;
@@ -204,16 +193,17 @@ document.addEventListener("DOMContentLoaded", () => {
       return acc;
     }, {});
 
-  const defaultLang = Object.keys(LANGS)[0];
+  // Default language: stable for home, otherwise keep prior behavior
+  const defaultLang = (baseName === homeBase) ? SITE_DEFAULT_LANG : Object.keys(LANGS)[0];
 
-  // If current slug has a lang suffix, use it; otherwise default to defaultLang.
-  const currentLang = slugLang || defaultLang;
+  // Current language: for "/", it's always the home default
+  const currentLang = isRoot ? defaultLang : (slugLang || defaultLang);
 
-  console.log("Current:", { rawPath, slug, baseDir, baseName, currentLang, defaultLang });
+  console.log("Current:", { rawPath, slug, baseDir, baseName, currentLang, defaultLang, SITE_DEFAULT_LANG });
   console.log("Languages (per-note):", LANGS);
 
   // ---------------------------------------------------------
-  // STEP 4: Build target URLs (home note uses '/' for defaultLang)
+  // STEP 4: Build target URLs
   // ---------------------------------------------------------
   const buildTargetUrl = (targetLang) => {
     // Home note: default language is '/', others are '/homeBase-xx'
@@ -228,7 +218,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // ---------------------------------------------------------
-  // STEP 5: Create language switcher (same UI logic)
+  // STEP 5: Create language switcher
   // ---------------------------------------------------------
   const switcher = document.createElement("div");
   switcher.className = "lang-switcher";
@@ -260,6 +250,7 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("Dynamic switcher initialized");
 });
 </script>
+
 
 
 
