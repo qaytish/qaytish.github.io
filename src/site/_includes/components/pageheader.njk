@@ -176,6 +176,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if (m) langSet.add(m[1]);
   }
 
+  // HOME FIX: add the default language that maps to "/".
+  // Home default has no "-xx" slug, so it won't be discovered via sidebar matching.
+  if (baseName === homeBase) {
+    // Prefer: <html lang="uz">, fallback: current slug suffix, fallback: first detected variant
+    const htmlLang = document.documentElement.lang?.trim().toLowerCase();
+    const defaultCandidate =
+      (htmlLang && /^[a-z]{2,3}$/.test(htmlLang) ? htmlLang : "") ||
+      slugLang ||
+      [...langSet][0];
+  
+    if (defaultCandidate) langSet.add(defaultCandidate);
+  }
+
+
   // If nothing found, no switcher.
   if (langSet.size === 0) {
     console.log("No per-note language variants detected for:", baseName);
