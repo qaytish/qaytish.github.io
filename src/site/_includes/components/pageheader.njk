@@ -37,11 +37,52 @@
 }
 </style>
 
+<style>
+.lang-switcher {
+  position: fixed;
+  bottom: 16px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  gap: 10px;
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: blur(16px);
+  padding: 8px 14px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  font: 600 14px system-ui;
+}
+.lang-switcher button {
+  all: unset;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: rgba(30, 30, 30, 0.94) !important;
+  background-color: white !important;
+  font-weight: bold
+}
+.lang-switcher button.active {
+  color: white !important;
+  background: #0066ff !important;
+  color: white;
+}
+.lang-switcher button:hover:not(.active) {
+  background: #f0f0f0;
+}
+@media (prefers-color-scheme: dark) {
+  .lang-switcher { background: rgba(30,30,30,0.94); }
+  .lang-switcher button:hover:not(.active) { background: #404040; }
+}
+</style>
+
+
+
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   console.clear();
-  console.log("Dynamic Language Switcher v2025 (patched)");
+  console.log("Dynamic Language Switcher v2025");
 
   // ---------------------------------------------------------
   // Utility: extract slug from href (no trailing slash)
@@ -67,10 +108,13 @@ document.addEventListener("DOMContentLoaded", () => {
     .map(getSlugFromHref)
     .filter(Boolean);
 
+  console.log("slugs:", slugs);
+
   // ---------------------------------------------------------
   // STEP 2: Infer languages by detecting repeated suffixes
   // ---------------------------------------------------------
   const langCounts = {};
+
   for (const slug of slugs) {
     const match = slug.match(/-([a-z]{2,3})$/);
     if (match) {
@@ -80,8 +124,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const LANGS = Object.keys(langCounts)
-    .filter(lang => langCounts[lang] > 1)
-    .sort()
+    .filter(lang => langCounts[lang] > 1) // avoid accidental singletons
+    .sort()                               // stable order
     .reduce((acc, lang) => {
       acc[lang] = lang.toUpperCase();
       return acc;
@@ -94,11 +138,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   console.log("Languages detected:", LANGS);
 
-  // Decide what "default language" means:
-  // Your code already assumes "first detected language" is default for the ROOT,
-  // so keep that assumption, but apply it consistently to ALL pages.
-  const DEFAULT_LANG = Object.keys(LANGS)[0];
-
   // ---------------------------------------------------------
   // STEP 3: Detect current slug, baseDir, current language
   // ---------------------------------------------------------
@@ -109,43 +148,40 @@ document.addEventListener("DOMContentLoaded", () => {
     ? "/" + parts.slice(0, -1).join("/") + "/"
     : "/";
 
-  const slugLangMatch = slug.match(/-([a-z]{2,3})$/)?.[1] || null;
-  const currentLang = slugLangMatch || DEFAULT_LANG;
+  const currentLang =
+    slug.match(/-([a-z]{2,3})$/)?.[1] || Object.keys(LANGS)[0];
 
   const baseName = slug.replace(/-[a-z]{2,3}$/, "");
 
-  console.log("Current:", { slug, baseDir, baseName, currentLang, DEFAULT_LANG });
+  console.log("Current:", { slug, baseDir, baseName, currentLang });
 
   // ---------------------------------------------------------
   // STEP 4: Detect home page base name from sidebar link
   // ---------------------------------------------------------
   const getHomeBaseName = () => {
-    // Keep your intent, but avoid fragile selector combos.
-    const link =
-      document.querySelector('a.filename[href="/"], a.filename[href="./"]') ||
-      document.querySelector('a[href="/"].filename, a[href="./"].filename');
-
+    const link = document.querySelector(
+      'a[href="/"].filename, a[href="./"].filename, a[href="/"] .filename'
+    );
+    console.log("link textcontent", link.textContent)
     if (!link?.textContent) return "home";
 
-    let name = link.textContent
+    let name =  link.textContent
       .trim()
       .toLowerCase()
       .replace(/\s+/g, "-")
       .replace(/[^\w-]/g, "")
       .replace(/-[a-z]{2,3}$/, "");
-
-    // IMPORTANT FIX:
-    // Only remove language suffix if it is actually a suffix marker (with a hyphen),
-    // otherwise you risk chopping real words (e.g., "kitchen" -> "kitch").
+    // Remove any detected language suffix at the very end
     for (const suffix of Object.keys(LANGS)) {
-      const regex = new RegExp(`-${suffix}$`);
+      const regex = new RegExp(`${suffix}$`);
       if (regex.test(name)) {
         name = name.replace(regex, "");
         break;
       }
     }
-    return name || "home";
+    return name;
   };
+  
 
   const homeBase = getHomeBaseName();
   console.log("Home base:", homeBase);
@@ -157,18 +193,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const isRoot = rawPath === "/";
     const isHomePage = baseName === homeBase;
 
-    // Root and home rules stay the same, but use DEFAULT_LANG consistently.
-    if (isRoot || isHomePage) {
-      return targetLang === DEFAULT_LANG
+    if (isRoot) {
+      return targetLang === Object.keys(LANGS)[0]
         ? "/"
         : "/" + homeBase + "-" + targetLang;
     }
 
-    // IMPORTANT FIX:
-    // For non-home pages, default language should NOT include "-xx"
-    // if your default pages are unsuffixed (common in Digital Garden).
-    if (targetLang === DEFAULT_LANG) {
-      return baseDir + baseName;
+    if (isHomePage) {
+      return targetLang === Object.keys(LANGS)[0]
+        ? "/"
+        : "/" + homeBase + "-" + targetLang;
     }
 
     return baseDir + baseName + "-" + targetLang;
@@ -184,7 +218,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const btn = document.createElement("button");
     btn.textContent = label;
 
-    if (code === currentLang) btn.classList.add("active");
+    if (code === currentLang) {
+      btn.classList.add("active");
+    }
 
     btn.onclick = async () => {
       if (code === currentLang) return;
@@ -193,12 +229,10 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log(`Switch → ${currentLang} → ${code}:`, targetUrl);
 
       try {
-        const res = await fetch(targetUrl, { method: "HEAD", redirect: "follow" });
+        const res = await fetch(targetUrl, { method: "HEAD" });
         if (res.ok) location.href = targetUrl;
-        else location.href = targetUrl; // fallback: let the browser handle redirects/404 page
       } catch (err) {
         console.log("Fetch error:", err);
-        location.href = targetUrl; // fallback: still navigate
       }
     };
 
@@ -209,6 +243,8 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("Dynamic switcher initialized");
 });
 </script>
+
+
 
 
 
