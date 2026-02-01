@@ -1,23 +1,31 @@
 [
 {
 		"title": "fanlar",
-		"date":"Sun Feb 01 2026 15:24:44 GMT+0000 (Coordinated Universal Time)",
+		"date":"Sun Feb 01 2026 15:27:23 GMT+0000 (Coordinated Universal Time)",
 		"url":"/fanlar/",
 		"content": "meningfanlarim",
 		"tags": [ "note"]
 },
 
 {
-		"title": "home page.en",
-		"date":"Sun Feb 01 2026 15:24:44 GMT+0000 (Coordinated Universal Time)",
+		"title": "Home page",
+		"date":"Sun Feb 01 2026 15:27:23 GMT+0000 (Coordinated Universal Time)",
 		"url":"/home-page-en/",
 		"content": "this is home page",
 		"tags": [ "note"]
 },
 
 {
-		"title": "home page.uz",
-		"date":"Sun Feb 01 2026 15:24:44 GMT+0000 (Coordinated Universal Time)",
+		"title": "Dom",
+		"date":"Sun Feb 01 2026 15:27:23 GMT+0000 (Coordinated Universal Time)",
+		"url":"/home-page-ru/",
+		"content": "eto dssg",
+		"tags": [ "note"]
+},
+
+{
+		"title": "Bosh sahifa",
+		"date":"Sun Feb 01 2026 15:27:23 GMT+0000 (Coordinated Universal Time)",
 		"url":"/",
 		"content": "bu Bosh sahifa.",
 		"tags": [ "note","gardenEntry"]
@@ -25,7 +33,7 @@
 
 {
 		"title": "test.en",
-		"date":"Sun Feb 01 2026 15:24:44 GMT+0000 (Coordinated Universal Time)",
+		"date":"Sun Feb 01 2026 15:27:23 GMT+0000 (Coordinated Universal Time)",
 		"url":"/test-en/",
 		"content": "",
 		"tags": [ "note"]
@@ -33,7 +41,7 @@
 
 {
 		"title": "test.ru",
-		"date":"Sun Feb 01 2026 15:24:44 GMT+0000 (Coordinated Universal Time)",
+		"date":"Sun Feb 01 2026 15:27:23 GMT+0000 (Coordinated Universal Time)",
 		"url":"/test-ru/",
 		"content": "eto ru",
 		"tags": [ "note"]
@@ -41,7 +49,7 @@
 
 {
 		"title": "test.uz",
-		"date":"Sun Feb 01 2026 15:24:44 GMT+0000 (Coordinated Universal Time)",
+		"date":"Sun Feb 01 2026 15:27:23 GMT+0000 (Coordinated Universal Time)",
 		"url":"/test-uz/",
 		"content": "uz test",
 		"tags": [ "note"]
