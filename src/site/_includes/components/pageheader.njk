@@ -38,9 +38,11 @@
 </style>
 
 
-
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+  console.clear();
+  console.log("Dynamic Language Switcher v2025 (patched)");
+
   // ---------------------------------------------------------
   // Utility: extract slug from href (no trailing slash)
   // ---------------------------------------------------------
@@ -55,12 +57,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  const hasLangSuffix = (slug) => /-([a-z]{2,3})$/i.test(slug);
-  const getLangSuffix = (slug) => slug.match(/-([a-z]{2,3})$/i)?.[1]?.toLowerCase() || null;
-  const stripLangSuffix = (slug) => slug.replace(/-([a-z]{2,3})$/i, "");
-
   // ---------------------------------------------------------
-  // STEP 1: Collect slugs from sidebar
+  // STEP 1: Collect all candidate slugs from sidebar
   // ---------------------------------------------------------
   const anchors = [...document.querySelectorAll("a.filename")];
   const slugs = anchors
@@ -70,89 +68,109 @@ document.addEventListener("DOMContentLoaded", () => {
     .filter(Boolean);
 
   // ---------------------------------------------------------
-  // STEP 2: Infer languages by repeated suffixes
+  // STEP 2: Infer languages by detecting repeated suffixes
   // ---------------------------------------------------------
   const langCounts = {};
   for (const slug of slugs) {
-    const lang = getLangSuffix(slug);
-    if (lang) langCounts[lang] = (langCounts[lang] || 0) + 1;
+    const match = slug.match(/-([a-z]{2,3})$/);
+    if (match) {
+      const lang = match[1];
+      langCounts[lang] = (langCounts[lang] || 0) + 1;
+    }
   }
 
   const LANGS = Object.keys(langCounts)
-    .filter(lang => langCounts[lang] > 1)  // avoid accidental singletons
+    .filter(lang => langCounts[lang] > 1)
     .sort()
     .reduce((acc, lang) => {
       acc[lang] = lang.toUpperCase();
       return acc;
     }, {});
 
-  const langList = Object.keys(LANGS);
-  if (langList.length === 0) return;
+  if (Object.keys(LANGS).length === 0) {
+    console.log("No language patterns detected.");
+    return;
+  }
+
+  console.log("Languages detected:", LANGS);
+
+  // Decide what "default language" means:
+  // Your code already assumes "first detected language" is default for the ROOT,
+  // so keep that assumption, but apply it consistently to ALL pages.
+  const DEFAULT_LANG = Object.keys(LANGS)[0];
 
   // ---------------------------------------------------------
-  // STEP 3: Detect whether site uses unsuffixed "default" pages
-  // If any sidebar slug has NO suffix, we assume default pages are unsuffixed.
+  // STEP 3: Detect current slug, baseDir, current language
   // ---------------------------------------------------------
-  const hasUnsuffixedPages = slugs.some(s => !hasLangSuffix(s));
-
-  // Pick a stable default:
-  // - If unsuffixed pages exist, default language is "unsuffixed".
-  //   We still need a code for button highlighting. We’ll choose:
-  //   1) current page's lang if it has suffix
-  //   2) otherwise first detected language (only for UI label fallback)
-  // - If all pages are suffixed, default is just the first detected language.
   const rawPath = location.pathname.replace(/\/+$/, "") || "/";
   const parts = rawPath.split("/").filter(Boolean);
   const slug = parts.length ? parts[parts.length - 1] : "";
-  const baseDir = parts.length > 1 ? "/" + parts.slice(0, -1).join("/") + "/" : "/";
-  const currentLang = getLangSuffix(slug) || (langList[0] || "");
-  const baseName = stripLangSuffix(slug);
+  const baseDir = parts.length > 1
+    ? "/" + parts.slice(0, -1).join("/") + "/"
+    : "/";
 
-  const DEFAULT_LANG = hasUnsuffixedPages ? "__default__" : langList[0];
+  const slugLangMatch = slug.match(/-([a-z]{2,3})$/)?.[1] || null;
+  const currentLang = slugLangMatch || DEFAULT_LANG;
 
-  // Helper: is this target language considered the default?
-  const isDefaultLang = (langCode) => (
-    DEFAULT_LANG === "__default__" ? langCode === (langList[0] || langCode) : langCode === DEFAULT_LANG
-  );
+  const baseName = slug.replace(/-[a-z]{2,3}$/, "");
+
+  console.log("Current:", { slug, baseDir, baseName, currentLang, DEFAULT_LANG });
 
   // ---------------------------------------------------------
-  // STEP 4: Detect home base name from sidebar link (fallback: "home")
+  // STEP 4: Detect home page base name from sidebar link
   // ---------------------------------------------------------
   const getHomeBaseName = () => {
+    // Keep your intent, but avoid fragile selector combos.
     const link =
-      document.querySelector('a.filename[href="/"], a.filename[href="./"], a[href="/"].filename') ||
-      document.querySelector('a[href="/"], a[href="./"]');
+      document.querySelector('a.filename[href="/"], a.filename[href="./"]') ||
+      document.querySelector('a[href="/"].filename, a[href="./"].filename');
 
     if (!link?.textContent) return "home";
 
-    return link.textContent
+    let name = link.textContent
       .trim()
       .toLowerCase()
       .replace(/\s+/g, "-")
       .replace(/[^\w-]/g, "")
-      .replace(/-([a-z]{2,3})$/i, "");
+      .replace(/-[a-z]{2,3}$/, "");
+
+    // IMPORTANT FIX:
+    // Only remove language suffix if it is actually a suffix marker (with a hyphen),
+    // otherwise you risk chopping real words (e.g., "kitchen" -> "kitch").
+    for (const suffix of Object.keys(LANGS)) {
+      const regex = new RegExp(`-${suffix}$`);
+      if (regex.test(name)) {
+        name = name.replace(regex, "");
+        break;
+      }
+    }
+    return name || "home";
   };
 
   const homeBase = getHomeBaseName();
+  console.log("Home base:", homeBase);
 
   // ---------------------------------------------------------
-  // STEP 5: Build target URLs (omit suffix for default when applicable)
+  // STEP 5: Build target URLs
   // ---------------------------------------------------------
   const buildTargetUrl = (targetLang) => {
     const isRoot = rawPath === "/";
-    const isHomePage = baseName === homeBase || slug === "" || slug === homeBase || slug === (homeBase + "-" + currentLang);
+    const isHomePage = baseName === homeBase;
 
-    // If site uses unsuffixed default pages:
-    const omitSuffix = hasUnsuffixedPages && isDefaultLang(targetLang);
-
+    // Root and home rules stay the same, but use DEFAULT_LANG consistently.
     if (isRoot || isHomePage) {
-      if (omitSuffix) return "/";
-      return "/" + homeBase + "-" + targetLang;
+      return targetLang === DEFAULT_LANG
+        ? "/"
+        : "/" + homeBase + "-" + targetLang;
     }
 
-    if (omitSuffix) {
+    // IMPORTANT FIX:
+    // For non-home pages, default language should NOT include "-xx"
+    // if your default pages are unsuffixed (common in Digital Garden).
+    if (targetLang === DEFAULT_LANG) {
       return baseDir + baseName;
     }
+
     return baseDir + baseName + "-" + targetLang;
   };
 
@@ -166,26 +184,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const btn = document.createElement("button");
     btn.textContent = label;
 
-    // Active state:
-    // - If current page has a suffix, match it.
-    // - If current page is unsuffixed, mark the "default" button active (we map it to first detected lang).
-    const currentIsUnsuffixed = !hasLangSuffix(slug);
-    const defaultUiCode = langList[0]; // just for UI highlight, since "unsuffixed" isn't a real code
-
-    if ((!currentIsUnsuffixed && code === currentLang) || (currentIsUnsuffixed && code === defaultUiCode)) {
-      btn.classList.add("active");
-    }
+    if (code === currentLang) btn.classList.add("active");
 
     btn.onclick = async () => {
+      if (code === currentLang) return;
+
       const targetUrl = buildTargetUrl(code);
-      if (location.pathname.replace(/\/+$/, "") === targetUrl.replace(/\/+$/, "")) return;
+      console.log(`Switch → ${currentLang} → ${code}:`, targetUrl);
 
       try {
-        const res = await fetch(targetUrl, { method: "HEAD" });
+        const res = await fetch(targetUrl, { method: "HEAD", redirect: "follow" });
         if (res.ok) location.href = targetUrl;
-      } catch {
-        // If HEAD fails (some hosts block it), fall back to navigation anyway.
-        location.href = targetUrl;
+        else location.href = targetUrl; // fallback: let the browser handle redirects/404 page
+      } catch (err) {
+        console.log("Fetch error:", err);
+        location.href = targetUrl; // fallback: still navigate
       }
     };
 
@@ -193,8 +206,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   document.body.appendChild(switcher);
+  console.log("Dynamic switcher initialized");
 });
 </script>
+
+
+
 
 
 
