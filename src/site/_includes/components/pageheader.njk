@@ -75,7 +75,6 @@
   .lang-switcher button:hover:not(.active) { background: #404040; }
 }
 </style>
-
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   console.clear();
@@ -95,8 +94,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
   // ---------------------------------------------------------
-  // STEP 0: Detect current path pieces early (we need baseName first)
+  // STEP 0: Detect current path pieces early
   // ---------------------------------------------------------
   const rawPath = location.pathname.replace(/\/+$/, "") || "/";
   const parts = rawPath.split("/").filter(Boolean);
@@ -109,24 +110,41 @@ document.addEventListener("DOMContentLoaded", () => {
   const slugBaseName = slug.replace(/-[a-z]{2,3}$/, "");
 
   // ---------------------------------------------------------
-  // STEP 1: Detect home page base name (dg-home marker)
+  // STEP 1: Detect home page base name (dg-home marker) + cache
   //   You leave: <file-name>home.page</file-name>
   //   inside the note you mark: dg-home="true"
   // ---------------------------------------------------------
+  const HOME_BASE_KEY = "dg_home_base";
+
+  const normalizeFileNameToSlugBase = (text) => {
+    return text.trim()
+      .toLowerCase()
+      .replace(/\./g, "-")     // dots -> hyphens
+      .replace(/\s+/g, "-")    // spaces -> hyphens
+      .replace(/[^\w-]/g, "")  // remove anything weird
+      .replace(/-+$/g, "");    // trim trailing hyphens
+  };
+
   const getHomeBaseName = () => {
+    // 1) Preferred: <file-name>...</file-name> inside a dg-home node
     const marker = document.querySelector('[dg-home="true"] file-name')
                 || document.querySelector('file-name'); // fallback
 
     if (marker?.textContent?.trim()) {
-      return marker.textContent.trim()
-        .toLowerCase()
-        .replace(/\./g, "-")     // dots -> hyphens
-        .replace(/\s+/g, "-")    // spaces -> hyphens
-        .replace(/[^\w-]/g, "")  // remove anything weird
-        .replace(/-+$/g, "");    // trim trailing hyphens
+      const fromMarker = normalizeFileNameToSlugBase(marker.textContent);
+      if (fromMarker) {
+        try { localStorage.setItem(HOME_BASE_KEY, fromMarker); } catch {}
+        return fromMarker;
+      }
     }
 
-    // Fallback: old sidebar-root-link text method
+    // 2) Cached (works on /home-page-en, /home-page-ru, etc.)
+    try {
+      const cached = localStorage.getItem(HOME_BASE_KEY);
+      if (cached?.trim()) return cached.trim();
+    } catch {}
+
+    // 3) Fallback: old sidebar-root-link text method
     const link = document.querySelector(
       'a[href="/"].filename, a[href="./"].filename, a[href="/"] .filename'
     );
@@ -148,7 +166,6 @@ document.addEventListener("DOMContentLoaded", () => {
     (document.documentElement.lang?.trim().toLowerCase().match(/^[a-z]{2,3}$/) || [])[0]
     || "uz";
 
-  // If we're literally at '/', treat current page as the home note.
   const isRoot = rawPath === "/";
   const baseName = isRoot ? homeBase : slugBaseName;
 
@@ -166,8 +183,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // STEP 3: Infer languages ONLY for the current note (baseName-xx)
   // ---------------------------------------------------------
   const langSet = new Set();
-
-  const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const langRegex = new RegExp("^" + escapeRe(baseName) + "-([a-z]{2,3})$");
 
   for (const s of slugs) {
@@ -175,7 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (m) langSet.add(m[1]);
   }
 
-  // HOME FIX: always include the "/" language for the home note
+  // HOME FIX: always include the "/" language for the home note (including its -en/-ru variants)
   if (baseName === homeBase) {
     langSet.add(SITE_DEFAULT_LANG);
   }
@@ -185,7 +200,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  // Convert to { uz: "UZ", en: "EN", ... }
   const LANGS = [...langSet]
     .sort()
     .reduce((acc, lang) => {
@@ -206,14 +220,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // STEP 4: Build target URLs
   // ---------------------------------------------------------
   const buildTargetUrl = (targetLang) => {
-    // Home note: default language is '/', others are '/homeBase-xx'
     if (baseName === homeBase) {
       return targetLang === defaultLang
         ? "/"
         : "/" + homeBase + "-" + targetLang;
     }
-
-    // Normal notes always use /dir/baseName-xx
     return baseDir + baseName + "-" + targetLang;
   };
 
@@ -250,6 +261,7 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("Dynamic switcher initialized");
 });
 </script>
+
 
 
 
