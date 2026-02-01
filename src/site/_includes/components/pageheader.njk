@@ -129,7 +129,7 @@ document.addEventListener("DOMContentLoaded", () => {
       .toLowerCase()
       .replace(/\s+/g, "-")
       .replace(/[^\w-]/g, "")
-      .replace(/-[a-z]{2,3}$/, "");
+      .replace(/-[a-z]{2,3}$/, "-");
     // Remove any detected language suffix at the very end
     for (const suffix of Object.keys(LANGS)) {
       const regex = new RegExp(`${suffix}$`);
