@@ -1,23 +1,15 @@
 [
 {
 		"title": "Bosh sahifa",
-		"date":"Mon Feb 02 2026 12:36:08 GMT+0000 (Coordinated Universal Time)",
+		"date":"Mon Feb 02 2026 12:53:16 GMT+0000 (Coordinated Universal Time)",
 		"url":"/",
 		"content": "",
 		"tags": [ "note","gardenEntry"]
 },
 
 {
-		"title": "Kitoblarim",
-		"date":"Mon Feb 02 2026 12:36:08 GMT+0000 (Coordinated Universal Time)",
-		"url":"/kitoblarim/",
-		"content": "bu esa kitoblarim",
-		"tags": [ "note"]
-},
-
-{
 		"title": "fanlar",
-		"date":"Mon Feb 02 2026 12:36:08 GMT+0000 (Coordinated Universal Time)",
+		"date":"Mon Feb 02 2026 12:53:16 GMT+0000 (Coordinated Universal Time)",
 		"url":"/fanlar/",
 		"content": "meningfanlarim",
 		"tags": [ "note"]
